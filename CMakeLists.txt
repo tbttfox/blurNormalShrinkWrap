@@ -12,7 +12,8 @@ add_subdirectory("bvh/v2")
 
 set(SOURCE_FILES
     "blurNormalShrinkWrap.cpp"
-    "blurNormalShrinkWrap.h"
+    "cpom_normal.cpp"
+    "xxhash.c"
     "pluginRegister.cpp"
 )
 
