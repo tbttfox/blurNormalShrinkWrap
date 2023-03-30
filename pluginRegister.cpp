@@ -1,4 +1,4 @@
-#include "blurShrinkWrap.h"
+#include "blurNormalShrinkWrap.h"
 #include <maya/MGlobal.h>
 #include <maya/MFnPlugin.h>
 
@@ -6,8 +6,8 @@
 MStatus initializePlugin(MObject obj) {
     MStatus result;
     MFnPlugin plugin(obj, "Blur Studio", "1.0", "Any");
-    result = plugin.registerNode(DEFORMER_NAME, ShrinkWrapDeformer::id, ShrinkWrapDeformer::creator,
-                                  ShrinkWrapDeformer::initialize, MPxNode::kDeformerNode);
+    result = plugin.registerNode(DEFORMER_NAME, NormalShrinkWrapDeformer::id, NormalShrinkWrapDeformer::creator,
+                                  NormalShrinkWrapDeformer::initialize, MPxNode::kDeformerNode);
 
     MString nodeClassName(DEFORMER_NAME);
     MString registrantId("BlurPlugin");
@@ -24,7 +24,7 @@ MStatus initializePlugin(MObject obj) {
 MStatus uninitializePlugin(MObject obj) {
     MStatus result;
     MFnPlugin plugin(obj);
-    result = plugin.deregisterNode(ShrinkWrapDeformer::id);
+    result = plugin.deregisterNode(NormalShrinkWrapDeformer::id);
 
     MString nodeClassName(DEFORMER_NAME);
     MString registrantId("BlurPlugin");

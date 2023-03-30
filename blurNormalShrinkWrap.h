@@ -12,6 +12,9 @@
 #include <maya/MFnNumericAttribute.h>
 #include <vector>
 
+#include "xxhash.h"
+#include "cpom_normal.h"
+
 #define DEFORMER_NAME "blurNormalShrinkWrap"
 
 
@@ -22,18 +25,23 @@ public:
 
     static void* creator();
     static MStatus initialize();
+	//virtual MStatus compute(const MPlug& plug, MDataBlock& block);
     virtual MStatus deform(MDataBlock& block, MItGeometry& iter, const MMatrix& mat, unsigned int multiIndex);
     static MTypeId id;
 	
 	static MObject aMaxParam;
-	static MObject aReverse;
-	static MObject aBidirectional;
-	static MObject aClosestIfNone;
-	static MObject aProjectionType;
-	static MObject aProjectionVector;
-	static MObject aVectorSpace;
+	static MObject aAngleTolerance;
 	static MObject aTargetMesh;
 	static MObject aTargetInvWorld;
+private:
+
+	XXH64_hash_t vertHash = 0;
+
+	Bvh bvh;
+    std::vector<Tri> tris;
+    std::vector<BBox> bboxes;
+    std::vector<Vec3> centers;
+    std::vector<Vec3> normals;
 
 };
 
