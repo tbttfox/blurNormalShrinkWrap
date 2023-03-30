@@ -1,4 +1,4 @@
-#include "blurShrinkWrap.h"
+#include "blurNormalShrinkWrap.h"
 
 #include <vector>
 #include <algorithm>
@@ -31,19 +31,19 @@
 #define VS_TARGET 1
 #define VS_WORLD  2
 
-MTypeId ShrinkWrapDeformer::id(0x001226FF);
-MObject ShrinkWrapDeformer::aMaxParam;
-MObject ShrinkWrapDeformer::aReverse;
-MObject ShrinkWrapDeformer::aBidirectional;
-MObject ShrinkWrapDeformer::aClosestIfNone;
-MObject ShrinkWrapDeformer::aProjectionType;
-MObject ShrinkWrapDeformer::aProjectionVector;
-MObject ShrinkWrapDeformer::aVectorSpace;
-MObject ShrinkWrapDeformer::aTargetMesh;
-MObject ShrinkWrapDeformer::aTargetInvWorld;
+MTypeId NormalShrinkWrapDeformer::id(0x001226FF);
+MObject NormalShrinkWrapDeformer::aMaxParam;
+MObject NormalShrinkWrapDeformer::aReverse;
+MObject NormalShrinkWrapDeformer::aBidirectional;
+MObject NormalShrinkWrapDeformer::aClosestIfNone;
+MObject NormalShrinkWrapDeformer::aProjectionType;
+MObject NormalShrinkWrapDeformer::aProjectionVector;
+MObject NormalShrinkWrapDeformer::aVectorSpace;
+MObject NormalShrinkWrapDeformer::aTargetMesh;
+MObject NormalShrinkWrapDeformer::aTargetInvWorld;
 
-void* ShrinkWrapDeformer::creator() { return new ShrinkWrapDeformer(); }
-MStatus ShrinkWrapDeformer::initialize() {
+void* NormalShrinkWrapDeformer::creator() { return new NormalShrinkWrapDeformer(); }
+MStatus NormalShrinkWrapDeformer::initialize() {
     MStatus status;
     MFnNumericAttribute nAttr;
     MFnEnumAttribute eAttr;
@@ -114,7 +114,7 @@ MStatus ShrinkWrapDeformer::initialize() {
 }
 
 
-MStatus ShrinkWrapDeformer::deform(
+MStatus NormalShrinkWrapDeformer::deform(
         MDataBlock& block, MItGeometry& iter,
         const MMatrix& m, unsigned int multiIndex
         ) {

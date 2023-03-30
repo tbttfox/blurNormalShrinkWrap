@@ -12,13 +12,13 @@
 #include <maya/MFnNumericAttribute.h>
 #include <vector>
 
-#define DEFORMER_NAME "blurShrinkWrap"
+#define DEFORMER_NAME "blurNormalShrinkWrap"
 
 
-class ShrinkWrapDeformer : public MPxDeformerNode {
+class NormalShrinkWrapDeformer : public MPxDeformerNode {
 public:
-	ShrinkWrapDeformer() {};
-	virtual ~ShrinkWrapDeformer() {};
+	NormalShrinkWrapDeformer() {};
+	virtual ~NormalShrinkWrapDeformer() {};
 
     static void* creator();
     static MStatus initialize();
