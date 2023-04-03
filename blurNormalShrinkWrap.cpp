@@ -16,6 +16,7 @@
 #include <maya/MFloatMatrix.h>
 #include <maya/MBoundingBox.h>
 #include <maya/MPointArray.h>
+#include <maya/MAngle.h>
 
 
 #define CHECKSTAT(stat, msg) if ( !stat ) {  MGlobal::displayError(msg); return stat; }
@@ -83,8 +84,11 @@ MStatus NormalShrinkWrapDeformer::deform(
     MFnMesh fnTarget(target);
 
     // Hash the vertex positions so we can tell if they changed
-    const auto dptr = fnTarget.getRawDoublePoints(&stat);
-    XXH64_hash_t vertHashChk = XXH3_64bits(dptr, fnTarget.numVertices() * sizeof(double) * 3);
+    const auto fptr = fnTarget.getRawPoints(&stat);
+    if (fptr == NULL) {
+        return MStatus::kInvalidParameter;
+    }
+    XXH64_hash_t vertHashChk = XXH3_64bits(fptr, fnTarget.numVertices() * sizeof(float) * 3);
 
     // If the local vertex positions have changed, only then do we rebuild the BVH
     if (vertHash == 0 || vertHashChk != vertHash) {
@@ -98,21 +102,21 @@ MStatus NormalShrinkWrapDeformer::deform(
         fnTarget.getTriangles(triCounts, triVerts);
         for (UINT i = 0; i < triVerts.length(); i += 3) {
             int tv0 = triVerts[i + 0];
-            double v00 = (tv0 * 3) + 0;
-            double v01 = (tv0 * 3) + 1;
-            double v02 = (tv0 * 3) + 2;
+            double v00 = fptr[(tv0 * 3) + 0];
+            double v01 = fptr[(tv0 * 3) + 1];
+            double v02 = fptr[(tv0 * 3) + 2];
             Vec3 v0(v00, v01, v02);
 
             int tv1 = triVerts[i + 1];
-            double v10 = (tv1 * 3) + 0;
-            double v11 = (tv1 * 3) + 1;
-            double v12 = (tv1 * 3) + 2;
+            double v10 = fptr[(tv1 * 3) + 0];
+            double v11 = fptr[(tv1 * 3) + 1];
+            double v12 = fptr[(tv1 * 3) + 2];
             Vec3 v1(v10, v11, v12);
 
             int tv2 = triVerts[i + 2];
-            double v20 = (tv2 * 3) + 0;
-            double v21 = (tv2 * 3) + 1;
-            double v22 = (tv2 * 3) + 2;
+            double v20 = fptr[(tv2 * 3) + 0];
+            double v21 = fptr[(tv2 * 3) + 1];
+            double v22 = fptr[(tv2 * 3) + 2];
             Vec3 v2(v20, v21, v22);
 
             tris.emplace_back(v0, v1, v2);
@@ -122,17 +126,14 @@ MStatus NormalShrinkWrapDeformer::deform(
 
 
 
-
-
-
     float maxParam = block.inputValue(aMaxParam, &stat).asFloat();
-    float angleTol = block.inputValue(aAngleTolerance, &stat).asFloat();
     MMatrix tWInv = block.inputValue(aTargetInvWorld, &stat).asMatrix();
+
+    MAngle angleTolA = block.inputValue(aAngleTolerance, &stat).asAngle();
+    double angleTol = angleTolA.asRadians();
 
     MMatrix tranMatInv = m * tWInv;
     MMatrix tranMat = tranMatInv.inverse();
-
-
 
     //MMeshIntersector octree;
     //octree.create(target);
@@ -144,7 +145,7 @@ MStatus NormalShrinkWrapDeformer::deform(
         MPoint pt = iter.position();
         MPoint tpt = pt * tranMatInv; // target space point
 
-        MVector n = iter.normal();
+        MVector n = -iter.normal();
 
 
         Vec3 tv(tpt.x, tpt.y, tpt.z);

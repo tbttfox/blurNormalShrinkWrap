@@ -1,4 +1,5 @@
 #include <cmath>
+#include <numbers>
 
 #include "cpom_normal.h"
 
@@ -42,7 +43,7 @@ Vec3 get_closest(
     static constexpr size_t invalid_id = std::numeric_limits<size_t>::max();
     static constexpr size_t stack_size = 64;
 
-    Scalar cosTol = (angle >= 180.0) ? -2.0 : cos(angle * 3.14159265358979323846 / 180.0);
+    Scalar cosTol = (angle >= std::numbers::pi) ? -2.0 : cos(angle);
 
     Scalar best_dist2 = std::numeric_limits<Scalar>::max();
     auto best_prim_idx = invalid_id;
