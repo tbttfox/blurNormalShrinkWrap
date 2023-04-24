@@ -27,21 +27,44 @@ public:
     static MStatus initialize();
 	//virtual MStatus compute(const MPlug& plug, MDataBlock& block);
     virtual MStatus deform(MDataBlock& block, MItGeometry& iter, const MMatrix& mat, unsigned int multiIndex);
+
+    virtual MStatus compute(const MPlug& plug, MDataBlock& block);
+
     static MTypeId id;
 	
-	static MObject aMaxParam;
+	static MObject aBvhComputed;
+
+	static MObject aBaryIndices;
+	static MObject aBaryValues;
+
 	static MObject aAngleTolerance;
+
+	static MObject aTargetStaticMesh;
+	static MObject aTargetStaticInvWorld;
+
+	static MObject aSourceStaticMesh;
+	static MObject aSourceStaticInvWorld;
+
 	static MObject aTargetMesh;
 	static MObject aTargetInvWorld;
+
+
+
+
 private:
 
-	XXH64_hash_t vertHash = 0;
+	XXH64_hash_t mTargetVertHash = 0;
+	XXH64_hash_t mTargetStaticVertHash = 0;
+	XXH64_hash_t mSourceStaticVertHash = 0;
 
 	Bvh bvh;
     std::vector<Tri> tris;
     std::vector<BBox> bboxes;
     std::vector<Vec3> centers;
     std::vector<Vec3> normals;
+    std::vector<Vec3> barys;
+    std::vector<Index> baryIdxs;
+	MIntArray triVerts;
 
 };
 

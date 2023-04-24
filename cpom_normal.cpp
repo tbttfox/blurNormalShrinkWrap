@@ -29,7 +29,7 @@ Bvh build_bvh(
     return bvh::v2::DefaultBuilder<Node>::build(thread_pool, bboxes, centers, config);
 }
 
-Vec3 get_closest(
+Location get_closest(
     const Bvh& bvh,
     const std::vector<Tri>& tris,
     const std::vector<BBox>& bboxes,
@@ -64,7 +64,7 @@ Vec3 get_closest(
             auto prim_dist2 = bvh::v2::length_squared<Scalar, 3>(prim_point - qp);
             if (prim_dist2 < best_dist2) {
 
-                best_prim_idx = i;
+                best_prim_idx = triIdx;
                 best_point = prim_point;
                 best_bary = prim_bary;
                 best_dist2 = prim_dist2;
@@ -78,5 +78,6 @@ Vec3 get_closest(
     //std::cout << "Closest TriIdx " << best_prim_idx << std::endl;
     //std::cout << "Closest Bary" << best_bary[0] << ", " << best_bary[1] << ", " << best_bary[2] << std::endl;
     //std::cout << "Closest Point" << best_point[0] << ", " << best_point[1] << ", " << best_point[2] << std::endl;
-    return best_point;
+    return std::make_tuple(best_point, best_prim_idx, best_bary);
 }
+

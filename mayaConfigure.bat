@@ -7,8 +7,8 @@ SET COMPILER=Visual Studio 16 2019
 
 SET PFX=%~dp0
 cd %PFX%
-rmdir %BUILD% /s /q
-mkdir %BUILD%
+REM rmdir %BUILD% /s /q
+REM mkdir %BUILD%
 cd %BUILD%
 
 cmake ^

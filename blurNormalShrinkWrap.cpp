@@ -17,15 +17,30 @@
 #include <maya/MBoundingBox.h>
 #include <maya/MPointArray.h>
 #include <maya/MAngle.h>
+#include <maya/MFnPointArrayData.h>
+#include <maya/MFnIntArrayData.h>
 
 
 #define CHECKSTAT(stat, msg) if ( !stat ) {  MGlobal::displayError(msg); return stat; }
 
 MTypeId NormalShrinkWrapDeformer::id(0x00122714);
-MObject NormalShrinkWrapDeformer::aMaxParam;
+
+MObject NormalShrinkWrapDeformer::aBvhComputed;
+
+MObject NormalShrinkWrapDeformer::aBaryIndices;
+MObject NormalShrinkWrapDeformer::aBaryValues;
+
 MObject NormalShrinkWrapDeformer::aAngleTolerance;
+
+MObject NormalShrinkWrapDeformer::aTargetStaticMesh;
+MObject NormalShrinkWrapDeformer::aTargetStaticInvWorld;
+
+MObject NormalShrinkWrapDeformer::aSourceStaticMesh;
+MObject NormalShrinkWrapDeformer::aSourceStaticInvWorld;
+
 MObject NormalShrinkWrapDeformer::aTargetMesh;
 MObject NormalShrinkWrapDeformer::aTargetInvWorld;
+
 
 void* NormalShrinkWrapDeformer::creator() { return new NormalShrinkWrapDeformer(); }
 
@@ -37,19 +52,81 @@ MStatus NormalShrinkWrapDeformer::initialize() {
     MFnMatrixAttribute mAttr;
     MFnUnitAttribute uAttr;
 
-    aMaxParam = nAttr.create("maxParam", "mx", MFnNumericData::kFloat, 99999.0f, &status);
-    CHECKSTAT(status, "Error creating maxParam");
-    nAttr.setKeyable(true);
-    status = addAttribute(aMaxParam);
-    CHECKSTAT(status, "Error adding maxParam");
-    attributeAffects(aMaxParam, outputGeom);
 
-    aAngleTolerance = uAttr.create("angleTolerance", "at", MFnUnitAttribute::kAngle, std::numbers::pi / 20.0, &status);
+    aBvhComputed = nAttr.create("bvhComputed", "bc", MFnNumericData::kBoolean, false);
+    CHECKSTAT(status, "Error creating aBvhComputed");
+    nAttr.setHidden(true);
+    status = addAttribute(aBvhComputed);
+    CHECKSTAT(status, "Error adding aBvhComputed");
+    attributeAffects(aBvhComputed, aBaryIndices);
+    attributeAffects(aBvhComputed, aBaryValues);
+    attributeAffects(aBvhComputed, outputGeom);
+
+    aAngleTolerance = uAttr.create("angleTolerance", "at", MFnUnitAttribute::kAngle, std::numbers::pi / 3.0, &status);
     CHECKSTAT(status, "Error creating angleTolerance");
+    uAttr.setMin(std::numbers::pi / 6000.0);
+    uAttr.setMax(std::numbers::pi);
     uAttr.setKeyable(false);
+    uAttr.setChannelBox(true);
     status = addAttribute(aAngleTolerance);
     CHECKSTAT(status, "Error adding angleTolerance");
+    attributeAffects(aAngleTolerance, aBaryIndices);
+    attributeAffects(aAngleTolerance, aBaryValues);
     attributeAffects(aAngleTolerance, outputGeom);
+
+    aBaryIndices = tAttr.create("baryIndices", "bi", MFnData::kIntArray, &status);
+    CHECKSTAT(status, "Error creating aBaryIndices");
+    uAttr.setKeyable(false);
+    status = addAttribute(aBaryIndices);
+    CHECKSTAT(status, "Error adding aBaryIndices");
+    attributeAffects(aBaryIndices, outputGeom);
+
+    aBaryValues = tAttr.create("baryValues", "bv", MFnData::kPointArray, &status);
+    CHECKSTAT(status, "Error creating aBaryValues");
+    uAttr.setKeyable(false);
+    status = addAttribute(aBaryValues);
+    CHECKSTAT(status, "Error adding aBaryValues");
+    attributeAffects(aBaryValues, outputGeom);
+
+
+
+    aTargetStaticMesh = tAttr.create("targetStatic", "ts", MFnData::kMesh, MObject::kNullObj, &status);
+    CHECKSTAT(status, "Error creating targetStatic");
+    status = addAttribute(aTargetStaticMesh);
+    CHECKSTAT(status, "Error adding targetStatic");
+    attributeAffects(aTargetStaticMesh, aBvhComputed);
+    attributeAffects(aTargetStaticMesh, aBaryIndices);
+    attributeAffects(aTargetStaticMesh, aBaryValues);
+    attributeAffects(aTargetStaticMesh, outputGeom);
+
+    aTargetStaticInvWorld = mAttr.create("targetStaticInvWorld", "tsiw", MFnMatrixAttribute::kDouble, &status);
+    CHECKSTAT(status, "Error creating targetStaticInvWorld");
+    status = addAttribute(aTargetStaticInvWorld);
+    CHECKSTAT(status, "Error adding targetStaticInvWorld");
+    attributeAffects(aTargetStaticInvWorld, aBaryIndices);
+    attributeAffects(aTargetStaticInvWorld, aBaryValues);
+    attributeAffects(aTargetStaticInvWorld, outputGeom);
+
+
+
+    aSourceStaticMesh = tAttr.create("sourceStatic", "ss", MFnData::kMesh, MObject::kNullObj, &status);
+    CHECKSTAT(status, "Error creating sourceStatic");
+    status = addAttribute(aSourceStaticMesh);
+    CHECKSTAT(status, "Error adding sourceStatic");
+    attributeAffects(aSourceStaticMesh, aBaryIndices);
+    attributeAffects(aSourceStaticMesh, aBaryValues);
+    attributeAffects(aSourceStaticMesh, outputGeom);
+
+    aSourceStaticInvWorld = mAttr.create("sourceStaticInvWorld", "ssiw", MFnMatrixAttribute::kDouble, &status);
+    CHECKSTAT(status, "Error creating sourceStaticInvWorld");
+    status = addAttribute(aSourceStaticInvWorld);
+    CHECKSTAT(status, "Error adding sourceStaticInvWorld");
+    attributeAffects(aSourceStaticInvWorld, aBaryIndices);
+    attributeAffects(aSourceStaticInvWorld, aBaryValues);
+    attributeAffects(aSourceStaticInvWorld, outputGeom);
+
+
+
 
     aTargetMesh = tAttr.create("target", "t", MFnData::kMesh, MObject::kNullObj, &status);
     CHECKSTAT(status, "Error creating target");
@@ -63,43 +140,33 @@ MStatus NormalShrinkWrapDeformer::initialize() {
     CHECKSTAT(status, "Error adding targetInvWorld");
     attributeAffects(aTargetInvWorld, outputGeom);
 
+
     return MStatus::kSuccess;
 }
 
 
+MStatus NormalShrinkWrapDeformer::compute(const MPlug& plug, MDataBlock& block) {
 
-
-
-MStatus NormalShrinkWrapDeformer::deform(
-        MDataBlock& block, MItGeometry& iter,
-        const MMatrix& m, unsigned int multiIndex
-        ) {
     MStatus stat;
+    if (plug == aBvhComputed) {
+        MObject targetStatic = block.inputValue(aTargetStaticMesh, &stat).asMesh();
+        if (targetStatic.isNull()) return MStatus::kInvalidParameter;
+        MFnMesh fnTargetStatic(targetStatic);
+        const auto fptr = fnTargetStatic.getRawPoints(&stat);
+        if (fptr == NULL) {
+            return MStatus::kInvalidParameter;
+        }
 
-    float env = block.inputValue(envelope, &stat).asFloat();
-    if (env == 0.0f) return stat;
-
-    MObject target = block.inputValue(aTargetMesh, &stat).asMesh();
-    if (target.isNull()) return MStatus::kInvalidParameter;
-    MFnMesh fnTarget(target);
-
-    // Hash the vertex positions so we can tell if they changed
-    const auto fptr = fnTarget.getRawPoints(&stat);
-    if (fptr == NULL) {
-        return MStatus::kInvalidParameter;
-    }
-    XXH64_hash_t vertHashChk = XXH3_64bits(fptr, fnTarget.numVertices() * sizeof(float) * 3);
-
-    // If the local vertex positions have changed, only then do we rebuild the BVH
-    if (vertHash == 0 || vertHashChk != vertHash) {
-        vertHash = vertHashChk;
         bboxes.clear();
         centers.clear();
         normals.clear();
         tris.clear();
-        
-        MIntArray triCounts, triVerts;
-        fnTarget.getTriangles(triCounts, triVerts);
+        barys.clear();
+        baryIdxs.clear();
+        triVerts.clear();
+
+        MIntArray triCounts;
+        fnTargetStatic.getTriangles(triCounts, triVerts);
         for (UINT i = 0; i < triVerts.length(); i += 3) {
             int tv0 = triVerts[i + 0];
             double v00 = fptr[(tv0 * 3) + 0];
@@ -119,50 +186,144 @@ MStatus NormalShrinkWrapDeformer::deform(
             double v22 = fptr[(tv2 * 3) + 2];
             Vec3 v2(v20, v21, v22);
 
-            tris.emplace_back(v0, v1, v2);
+            // notice 0 2 1.  This reverses the direction of the normal
+            // Also the order of the barycenters
+            tris.emplace_back(v0, v2, v1);
         }
         bvh = build_bvh(tris, bboxes, centers, normals);
+
+        MDataHandle compH = block.outputValue(aBvhComputed, &stat);
+        compH.setBool(true);
+        block.setClean(aBvhComputed);
+    }
+    else if (plug == aBaryIndices || plug == aBaryValues) {
+        // force evaluation of the BVH
+        MDataHandle compH = block.inputValue(aBvhComputed, &stat);
+        bool bvhComputed = compH.asBool();
+        if (!bvhComputed) return stat;
+
+        MDataHandle sourceStaticH = block.inputValue(aSourceStaticMesh, &stat);
+        MObject sourceStatic = sourceStaticH.asMesh();
+        if (sourceStatic.isNull()) return MStatus::kInvalidParameter;
+        MFnMesh fnSourceStatic(sourceStatic);
+        const auto fptr = fnSourceStatic.getRawPoints(&stat);
+        if (fptr == NULL) {
+            return MStatus::kInvalidParameter;
+        }
+
+        MMatrix tWInv = block.inputValue(aTargetStaticInvWorld, &stat).asMatrix();
+        MMatrix sWInv = block.inputValue(aSourceStaticInvWorld, &stat).asMatrix();
+        MMatrix sWMat = sWInv.inverse();
+        MMatrix tranMatInv = sWMat * tWInv;
+        MMatrix tranMat = tranMatInv.inverse();
+
+        MAngle angleTolA = block.inputValue(aAngleTolerance, &stat).asAngle();
+        double angleTol = angleTolA.asRadians();
+
+
+        int numVerts = fnSourceStatic.numVertices();
+        MIntArray baryIdxs;
+        MPointArray baryVals;
+        baryIdxs.setLength(numVerts);
+        baryVals.setLength(numVerts);
+
+        MFloatVectorArray vnorms;
+        MPointArray qpts;
+        fnSourceStatic.getVertexNormals(false, vnorms);
+        fnSourceStatic.getPoints(qpts);
+
+        for (UINT i = 0; i < qpts.length(); ++i) {
+            
+            MPoint pt = qpts[i];
+            MPoint tpt = pt * tranMatInv; // target space point
+            MVector n = vnorms[i];
+
+            Vec3 tv(tpt.x, tpt.y, tpt.z);
+            Vec3 tn(n.x, n.y, n.z);
+
+            auto [cpom, baryIdx, bary] = get_closest(bvh,
+                tris,
+                bboxes,
+                centers,
+                normals,
+                tv,
+                tn,
+                angleTol
+            );
+
+            // Notice the 0 2 1.  This fixes the flipped normal thing
+            // from the triangles
+            baryVals[i] = MPoint(bary[0], bary[2], bary[1]);
+            baryIdxs[i] = baryIdx;
+        }
+
+        MDataHandle bvDataH = block.outputValue(aBaryValues, &stat);
+        MDataHandle biDataH = block.outputValue(aBaryIndices, &stat);
+
+        bvDataH.set(MFnPointArrayData().create(baryVals));
+        biDataH.set(MFnIntArrayData().create(baryIdxs));
+
+        block.setClean(aBaryValues);
+        block.setClean(aBaryIndices);
+    }
+    else if (plug == outputGeom) {
+        return MPxDeformerNode::compute(plug, block);
     }
 
+    return stat;
+}
 
 
-    float maxParam = block.inputValue(aMaxParam, &stat).asFloat();
-    MMatrix tWInv = block.inputValue(aTargetInvWorld, &stat).asMatrix();
+MStatus NormalShrinkWrapDeformer::deform(
+        MDataBlock& block, MItGeometry& iter,
+        const MMatrix& dMat, unsigned int multiIndex
+        ) {
+    MStatus stat;
 
-    MAngle angleTolA = block.inputValue(aAngleTolerance, &stat).asAngle();
-    double angleTol = angleTolA.asRadians();
+    float env = block.inputValue(envelope, &stat).asFloat();
+    if (env == 0.0f) return stat;
 
-    MMatrix tranMatInv = m * tWInv;
-    MMatrix tranMat = tranMatInv.inverse();
+    MObject target = block.inputValue(aTargetMesh, &stat).asMesh();
+    if (target.isNull()) return MStatus::kInvalidParameter;
+    MFnMesh fnTarget(target);
 
-    //MMeshIntersector octree;
-    //octree.create(target);
+    MMatrix tMatInv = block.inputValue(aTargetInvWorld, &stat).asMatrix();
+    MMatrix tMat = tMatInv.inverse();
 
-    for (size_t i=0; !iter.isDone(); iter.next(), i++) {
+    MMatrix dMatInv = dMat.inverse();
 
-        float w = weightValue(block, multiIndex, iter.index());
+    // Force the barys to compute if they haven't
+    MDataHandle bvDataH = block.inputValue(aBaryValues, &stat);
+    MFnPointArrayData bvDataA(bvDataH.data());
+    MPointArray baryValues = bvDataA.array();
+
+    MDataHandle biDataH = block.inputValue(aBaryIndices, &stat);
+    MFnIntArrayData biDataA(biDataH.data());
+    MIntArray baryIdxs = biDataA.array();
+
+    for (; !iter.isDone(); iter.next()) {
+        int i = iter.index();
+        if (i >= baryIdxs.length()) continue;
+
+        float w = weightValue(block, multiIndex, i);
         if (w == 0.0f) continue;
-        MPoint pt = iter.position();
-        MPoint tpt = pt * tranMatInv; // target space point
 
-        MVector n = -iter.normal();
+        int qIdx = baryIdxs[i];
+        if (qIdx < 0) continue;
 
+        MPoint bary = baryValues[i];
 
-        Vec3 tv(tpt.x, tpt.y, tpt.z);
-        Vec3 tn(n.x, n.y, n.z);
+        MPoint A, B, C;
+        fnTarget.getPoint(triVerts[3 * qIdx + 0], A);
+        fnTarget.getPoint(triVerts[3 * qIdx + 1], B);
+        fnTarget.getPoint(triVerts[3 * qIdx + 2], C);
+        MPoint P = (MVector)A * bary[0] + (MVector)B * bary[1] + (MVector)C * bary[2];
+        P *= tMat;
+        P *= dMatInv;
 
-        Vec3 cpom = get_closest(bvh,
-            tris,
-            bboxes,
-            centers,
-            normals,
-            tv,
-            tn,
-            angleTol
-        );
+        MPoint Po = iter.position();
+        iter.setPosition(((P - Po) * (env * w)) + Po);
 
-        MPoint res(cpom[0], cpom[1], cpom[2]);
-        iter.setPosition(env * w * ((res * tranMat) - pt) + pt);
     }
     return stat;
 }

@@ -18,6 +18,9 @@ using BBox     = bvh::v2::BBox<Scalar, 3>;
 using Node     = bvh::v2::Node<Scalar, 3>;
 using Bvh      = bvh::v2::Bvh<Node>;
 
+using Location = std::tuple<Vec3, Index, Vec3>;
+
+
 Bvh build_bvh(
     const std::vector<Tri>& tris,
     std::vector<BBox>& bboxes,
@@ -25,7 +28,7 @@ Bvh build_bvh(
     std::vector<Vec3>& normals
 );
 
-Vec3 get_closest(
+Location get_closest(
     const Bvh& bvh,
     const std::vector<Tri>& tris,
     const std::vector<BBox>& bboxes,
@@ -36,4 +39,3 @@ Vec3 get_closest(
     Vec3 norm,
     Scalar angle
 );
-
