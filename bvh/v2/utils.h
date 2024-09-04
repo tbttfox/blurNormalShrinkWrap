@@ -3,7 +3,7 @@
 
 #include "bvh/v2/platform.h"
 
-#include <climits>
+#include <limits>
 #include <cstdint>
 #include <cstring>
 #include <cmath>

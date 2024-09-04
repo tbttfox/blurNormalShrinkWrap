@@ -1,5 +1,6 @@
 #include "blurNormalShrinkWrap.h"
 
+#include <iostream>
 #include <numbers>
 #include <vector>
 #include <algorithm>
@@ -52,94 +53,84 @@ MStatus NormalShrinkWrapDeformer::initialize() {
     MFnMatrixAttribute mAttr;
     MFnUnitAttribute uAttr;
 
-
     aBvhComputed = nAttr.create("bvhComputed", "bc", MFnNumericData::kBoolean, false);
     CHECKSTAT(status, "Error creating aBvhComputed");
     nAttr.setHidden(true);
     status = addAttribute(aBvhComputed);
     CHECKSTAT(status, "Error adding aBvhComputed");
-    attributeAffects(aBvhComputed, aBaryIndices);
-    attributeAffects(aBvhComputed, aBaryValues);
-    attributeAffects(aBvhComputed, outputGeom);
-
-    aAngleTolerance = uAttr.create("angleTolerance", "at", MFnUnitAttribute::kAngle, std::numbers::pi / 3.0, &status);
-    CHECKSTAT(status, "Error creating angleTolerance");
-    uAttr.setMin(std::numbers::pi / 6000.0);
-    uAttr.setMax(std::numbers::pi);
-    uAttr.setKeyable(false);
-    uAttr.setChannelBox(true);
-    status = addAttribute(aAngleTolerance);
-    CHECKSTAT(status, "Error adding angleTolerance");
-    attributeAffects(aAngleTolerance, aBaryIndices);
-    attributeAffects(aAngleTolerance, aBaryValues);
-    attributeAffects(aAngleTolerance, outputGeom);
 
     aBaryIndices = tAttr.create("baryIndices", "bi", MFnData::kIntArray, &status);
     CHECKSTAT(status, "Error creating aBaryIndices");
     uAttr.setKeyable(false);
     status = addAttribute(aBaryIndices);
     CHECKSTAT(status, "Error adding aBaryIndices");
-    attributeAffects(aBaryIndices, outputGeom);
-
     aBaryValues = tAttr.create("baryValues", "bv", MFnData::kPointArray, &status);
     CHECKSTAT(status, "Error creating aBaryValues");
     uAttr.setKeyable(false);
     status = addAttribute(aBaryValues);
     CHECKSTAT(status, "Error adding aBaryValues");
-    attributeAffects(aBaryValues, outputGeom);
 
-
+    aAngleTolerance = uAttr.create("angleTolerance", "at", MFnUnitAttribute::kAngle, std::numbers::pi / 3.0, &status);
+    CHECKSTAT(status, "Error creating angleTolerance");
+    uAttr.setMin(std::numbers::pi / 6000.0);
+    uAttr.setMax(std::numbers::pi);
+    uAttr.setKeyable(true);
+    uAttr.setChannelBox(true);
+    status = addAttribute(aAngleTolerance);
+    CHECKSTAT(status, "Error adding angleTolerance");
 
     aTargetStaticMesh = tAttr.create("targetStatic", "ts", MFnData::kMesh, MObject::kNullObj, &status);
     CHECKSTAT(status, "Error creating targetStatic");
     status = addAttribute(aTargetStaticMesh);
     CHECKSTAT(status, "Error adding targetStatic");
-    attributeAffects(aTargetStaticMesh, aBvhComputed);
-    attributeAffects(aTargetStaticMesh, aBaryIndices);
-    attributeAffects(aTargetStaticMesh, aBaryValues);
-    attributeAffects(aTargetStaticMesh, outputGeom);
-
     aTargetStaticInvWorld = mAttr.create("targetStaticInvWorld", "tsiw", MFnMatrixAttribute::kDouble, &status);
     CHECKSTAT(status, "Error creating targetStaticInvWorld");
     status = addAttribute(aTargetStaticInvWorld);
     CHECKSTAT(status, "Error adding targetStaticInvWorld");
-    attributeAffects(aTargetStaticInvWorld, aBaryIndices);
-    attributeAffects(aTargetStaticInvWorld, aBaryValues);
-    attributeAffects(aTargetStaticInvWorld, outputGeom);
-
-
 
     aSourceStaticMesh = tAttr.create("sourceStatic", "ss", MFnData::kMesh, MObject::kNullObj, &status);
     CHECKSTAT(status, "Error creating sourceStatic");
     status = addAttribute(aSourceStaticMesh);
     CHECKSTAT(status, "Error adding sourceStatic");
-    attributeAffects(aSourceStaticMesh, aBaryIndices);
-    attributeAffects(aSourceStaticMesh, aBaryValues);
-    attributeAffects(aSourceStaticMesh, outputGeom);
-
     aSourceStaticInvWorld = mAttr.create("sourceStaticInvWorld", "ssiw", MFnMatrixAttribute::kDouble, &status);
     CHECKSTAT(status, "Error creating sourceStaticInvWorld");
     status = addAttribute(aSourceStaticInvWorld);
     CHECKSTAT(status, "Error adding sourceStaticInvWorld");
-    attributeAffects(aSourceStaticInvWorld, aBaryIndices);
-    attributeAffects(aSourceStaticInvWorld, aBaryValues);
-    attributeAffects(aSourceStaticInvWorld, outputGeom);
-
-
-
 
     aTargetMesh = tAttr.create("target", "t", MFnData::kMesh, MObject::kNullObj, &status);
     CHECKSTAT(status, "Error creating target");
     status = addAttribute(aTargetMesh);
     CHECKSTAT(status, "Error adding target");
-    attributeAffects(aTargetMesh, outputGeom);
-
     aTargetInvWorld = mAttr.create("targetInvWorld", "tiw", MFnMatrixAttribute::kDouble, &status);
     CHECKSTAT(status, "Error creating targetInvWorld");
     status = addAttribute(aTargetInvWorld);
     CHECKSTAT(status, "Error adding targetInvWorld");
-    attributeAffects(aTargetInvWorld, outputGeom);
+    
 
+    std::vector<MObject*> masters, clients;
+
+    masters.push_back(&aAngleTolerance);
+    masters.push_back(&aBvhComputed);
+    masters.push_back(&aSourceStaticInvWorld);
+    masters.push_back(&aSourceStaticMesh);
+    masters.push_back(&aTargetStaticInvWorld);
+    masters.push_back(&aTargetStaticMesh);
+
+    clients.push_back(&aBaryIndices);
+    clients.push_back(&aBaryValues);
+    clients.push_back(&outputGeom);
+
+    for (auto master: masters){
+        for (auto client: clients){
+            attributeAffects(*master, *client);
+        }
+    }
+
+    attributeAffects(aBaryIndices, outputGeom);
+    attributeAffects(aBaryValues, outputGeom);
+    attributeAffects(aTargetStaticMesh, aBvhComputed);
+    attributeAffects(aTargetMesh, outputGeom);
+    attributeAffects(aTargetInvWorld, outputGeom);
 
     return MStatus::kSuccess;
 }
