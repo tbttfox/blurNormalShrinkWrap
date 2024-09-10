@@ -1,5 +1,6 @@
 #include "bvh/v2/bvh.h"
 #include "bvh/v2/node.h"
+#include "bvh/v2/utils.h"
 #include "bvh/v2/default_builder.h"
 #include "bvh/v2/thread_pool.h"
 #include "bvh/v2/executor.h"
@@ -30,8 +31,8 @@ BVH_ALWAYS_INLINE Vec3 get_normal(const Tri &tri) {
 template <typename T, int N>
 BVH_ALWAYS_INLINE bvh::v2::Vec<T, N> vec_to_closest(const BBox& bbox, const bvh::v2::Vec<T, N>& p) {
     bvh::v2::Vec<T, N> ret;
-    static_for<0, N>([&] (size_t i) {
-        ret[i] = robust_max<T>(robust_max<T>(bbox.min[i] - p[i], p[i] - bbox.max[i]), 0);
+    bvh::v2::static_for<0, N>([&] (size_t i) {
+        ret[i] = bvh::v2::robust_max<T>(bvh::v2::robust_max<T>(bbox.min[i] - p[i], p[i] - bbox.max[i]), 0);
     });
     return ret;
 }
@@ -118,10 +119,7 @@ Location get_closest(
     };
 
     bvh::v2::SmallStack<Bvh::Index, stack_size> nodeStack;
-    
-    auto root = bvh.get_root();
-
-    bvh.traverse_top_down<false>(root, nodeStack, leafFunc, innerFunc);
+    bvh.traverse_top_down<false>(bvh.get_root().index, nodeStack, leafFunc, innerFunc);
 
     //std::cout << "Closest TriIdx " << best_prim_idx << std::endl;
     //std::cout << "Closest Bary" << best_bary[0] << ", " << best_bary[1] << ", " << best_bary[2] << std::endl;
