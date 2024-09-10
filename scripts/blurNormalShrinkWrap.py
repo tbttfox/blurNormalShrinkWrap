@@ -29,4 +29,4 @@ def buildNormalShrinkWrap(deformed, controlMesh):
     cmds.connectAttr(f"{targetShape}.outMesh", f"{dfm}.target")
 
 
-buildNormalShrinkWrap(*cmds.ls(selection=True)[:2])
+#buildNormalShrinkWrap(*cmds.ls(selection=True)[:2])

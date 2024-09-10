@@ -1,18 +1,19 @@
 #include "blurNormalShrinkWrap.h"
+#include "version.h"
 #include <maya/MGlobal.h>
 #include <maya/MFnPlugin.h>
 
 // standard initialization procedures
 MStatus initializePlugin(MObject obj) {
     MStatus result;
-    MFnPlugin plugin(obj, "Blur Studio", "1.0", "Any");
+    MFnPlugin plugin(obj, "Blur Studio", VERSION_STRING, "Any");
     result = plugin.registerNode(DEFORMER_NAME, NormalShrinkWrapDeformer::id, NormalShrinkWrapDeformer::creator,
                                   NormalShrinkWrapDeformer::initialize, MPxNode::kDeformerNode);
 
     MString nodeClassName(DEFORMER_NAME);
     MString registrantId("BlurPlugin");
 
-	MGlobal::executeCommand("makePaintable -attrType \"multiFloat\" -sm \"deformer\" \"" DEFORMER_NAME "\" \"weights\";");
+    MGlobal::executeCommand("makePaintable -attrType \"multiFloat\" -sm \"deformer\" \"" DEFORMER_NAME "\" \"weights\";");
 
     //MGPUDeformerRegistry::registerGPUDeformerCreator(nodeClassName, registrantId, PushGPUDeformer::getGPUDeformerInfo());
     //MGPUDeformerRegistry::addConditionalAttribute(nodeClassName, registrantId, MPxDeformerNode::envelope);
