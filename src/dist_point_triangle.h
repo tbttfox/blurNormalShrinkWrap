@@ -7,8 +7,6 @@
 
 #include <tuple>
 
-namespace bvh::v2 {
-
 // This was taken from https://github.com/embree/embree/blob/master/tutorials/common/math/closest_point.h
 // licensed under apache 2.0
 
@@ -16,16 +14,16 @@ namespace bvh::v2 {
 // but I'm templating it that way becuase that's MY only usecase
 // If anybody else needs something fancier ... sorry, that's on you :-D
 template <typename T, size_t N>
-::std::tuple<Vec<T, N>, Vec<T, 3>> closest_point_tri(Vec<T, N> const& p, Tri<T, N> const& tri)
+::std::tuple<bvh::v2::Vec<T, N>, bvh::v2::Vec<T, 3>> closest_point_tri(bvh::v2::Vec<T, N> const& p, bvh::v2::Tri<T, N> const& tri)
 {
     const T zero = static_cast<T>(0);
     const T one = static_cast<T>(1);
 
-    Vec<T, 3> bary(zero);
+    bvh::v2::Vec<T, 3> bary(zero);
 
-    const Vec<T, N> ab = tri.p1 - tri.p0;
-    const Vec<T, N> ac = tri.p2 - tri.p0;
-    const Vec<T, N> ap = p - tri.p0;
+    const bvh::v2::Vec<T, N> ab = tri.p1 - tri.p0;
+    const bvh::v2::Vec<T, N> ac = tri.p2 - tri.p0;
+    const bvh::v2::Vec<T, N> ap = p - tri.p0;
 
     const T d1 = dot(ab, ap);
     const T d2 = dot(ac, ap);
@@ -34,7 +32,7 @@ template <typename T, size_t N>
         return ::std::make_tuple(tri.p0, bary);
     }
 
-    const Vec<T, N> bp = p - tri.p1;
+    const bvh::v2::Vec<T, N> bp = p - tri.p1;
     const T d3 = dot(ab, bp);
     const T d4 = dot(ac, bp);
     if (d3 >= zero && d4 <= d3) {
@@ -42,7 +40,7 @@ template <typename T, size_t N>
         return ::std::make_tuple(tri.p1, bary);
     }
 
-    const Vec<T, N> cp = p - tri.p2;
+    const bvh::v2::Vec<T, N> cp = p - tri.p2;
     const T d5 = dot(ab, cp);
     const T d6 = dot(ac, cp);
     if (d6 >= zero && d5 <= d6) {
@@ -87,7 +85,5 @@ template <typename T, size_t N>
     bary[2] = w;
     return ::std::make_tuple(tri.p0 + v * ab + w * ac, bary);
 }
-
-} // namespace bvh::v2
 
 #endif

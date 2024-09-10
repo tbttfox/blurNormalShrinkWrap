@@ -1,5 +1,3 @@
-#include "blurNormalShrinkWrap.h"
-
 #include <iostream>
 #include <numbers>
 #include <vector>
@@ -21,6 +19,8 @@
 #include <maya/MFnPointArrayData.h>
 #include <maya/MFnIntArrayData.h>
 
+#include "blurNormalShrinkWrap.h"
+#include "cpom_types.h"
 
 #define CHECKSTAT(stat, msg) if ( !stat ) {  MGlobal::displayError(msg); return stat; }
 

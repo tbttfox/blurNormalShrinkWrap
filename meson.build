@@ -9,6 +9,7 @@ bvh_dep = dependency('bvh')
 source_files = [
   'src/blurNormalShrinkWrap.cpp',
   'src/pluginRegister.cpp',
+  'src/cpom_normal.cpp',
 ]
 
 # If a user-built version file exists, then just use that

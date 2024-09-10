@@ -1,4 +1,5 @@
 #pragma once
+
 #include <maya/MPxDeformerNode.h>
 #include <maya/MTypeId.h>
 #include <maya/MPlug.h>
@@ -12,8 +13,8 @@
 #include <maya/MFnNumericAttribute.h>
 #include <vector>
 
+#include "cpom_types.h"
 #include "cpom_normal.h"
-
 #define DEFORMER_NAME "blurNormalShrinkWrap"
 
 
