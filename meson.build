@@ -4,9 +4,10 @@ maya_dep = dependency('maya')
 maya_name_suffix = maya_dep.get_variable('name_suffix')
 maya_version = maya_dep.get_variable('maya_version')
 
+bvh_dep = dependency('bvh')
+
 source_files = [
   'src/blurNormalShrinkWrap.cpp',
-  'src/cpom_normal.cpp',
   'src/pluginRegister.cpp',
 ]
 
@@ -32,7 +33,7 @@ outlib = shared_library(
   install: true,
   install_dir : meson.global_source_root() / 'output_Maya' + maya_version,
   include_directories : include_directories(['src']),
-  dependencies : maya_dep,
+  dependencies : [maya_dep, bvh_dep],
   name_prefix : '',
   name_suffix : maya_name_suffix,
 )

@@ -1,0 +1,9 @@
+[wrap-git]
+
+url = https://github.com/madmann91/bvh.git
+revision = 66e445b92f68801a6dd8ef943fe3038976ecb4ff
+depth = 1
+method = cmake
+
+[provide]
+bvh = bvh_dep
