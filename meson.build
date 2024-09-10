@@ -1,4 +1,4 @@
-project('blurNormalShrinkWrap', 'cpp')
+project('blurNormalShrinkWrap', 'cpp', default_options: ['cpp_std=c++20'])
 
 maya_dep = dependency('maya')
 maya_name_suffix = maya_dep.get_variable('name_suffix')
