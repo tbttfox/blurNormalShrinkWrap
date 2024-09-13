@@ -21,10 +21,10 @@
 
 
 BVH_ALWAYS_INLINE Vec3 get_normal(const Tri &tri) {
-    return normalize(cross(tri.p0 - tri.p1, tri.p2 - tri.p0));
+    return bvh::v2::normalize(bvh::v2::cross(tri.p0 - tri.p1, tri.p2 - tri.p0));
 }
 
-template <typename T, int N>
+template <typename T, size_t N>
 BVH_ALWAYS_INLINE bvh::v2::Vec<T, N> vec_to_closest(const BBox& bbox, const bvh::v2::Vec<T, N>& p) {
     bvh::v2::Vec<T, N> ret;
     bvh::v2::static_for<0, N>([&] (size_t i) {
@@ -82,10 +82,10 @@ Location get_closest(
 
     auto innerFunc = [&](const Node& leftNode, const Node& rightNode) {
         auto left_vec = vec_to_closest(leftNode.get_bbox(), qp);
-        auto left_dist2 = dot(left_vec, left_vec);
+        auto left_dist2 = bvh::v2::dot(left_vec, left_vec);
 
         auto right_vec = vec_to_closest(rightNode.get_bbox(), qp);
-        auto right_dist2 = dot(right_vec, right_vec);
+        auto right_dist2 = bvh::v2::dot(right_vec, right_vec);
 
         return std::make_tuple(
             left_dist2 < best_dist2,
@@ -103,7 +103,7 @@ Location get_closest(
 
             auto [prim_point, prim_bary] = closest_point_tri(qp, tris[triIdx]);
             auto prim_vec = prim_point - qp;
-            auto prim_dist2 = dot(prim_vec, prim_vec);
+            auto prim_dist2 = bvh::v2::dot(prim_vec, prim_vec);
             if (prim_dist2 < best_dist2) {
                 best_prim_idx = triIdx;
                 best_point = prim_point;
