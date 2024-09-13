@@ -59,12 +59,12 @@ MStatus NormalShrinkWrapDeformer::initialize() {
     status = addAttribute(aBvhComputed);
     CHECKSTAT(status, "Error adding aBvhComputed");
 
-    aBaryIndices = tAttr.create("baryIndices", "bi", MFnData::kIntArray, &status);
+    aBaryIndices = tAttr.create("baryIndices", "bi", MFnData::kIntArray, MObject::kNullObj, &status);
     CHECKSTAT(status, "Error creating aBaryIndices");
     uAttr.setKeyable(false);
     status = addAttribute(aBaryIndices);
     CHECKSTAT(status, "Error adding aBaryIndices");
-    aBaryValues = tAttr.create("baryValues", "bv", MFnData::kPointArray, &status);
+    aBaryValues = tAttr.create("baryValues", "bv", MFnData::kPointArray, MObject::kNullObj, &status);
     CHECKSTAT(status, "Error creating aBaryValues");
     uAttr.setKeyable(false);
     status = addAttribute(aBaryValues);
@@ -158,7 +158,7 @@ MStatus NormalShrinkWrapDeformer::compute(const MPlug& plug, MDataBlock& block) 
 
         MIntArray triCounts;
         fnTargetStatic.getTriangles(triCounts, triVerts);
-        for (UINT i = 0; i < triVerts.length(); i += 3) {
+        for (unsigned int i = 0; i < triVerts.length(); i += 3) {
             int tv0 = triVerts[i + 0];
             double v00 = fptr[(tv0 * 3) + 0];
             double v01 = fptr[(tv0 * 3) + 1];
@@ -223,8 +223,8 @@ MStatus NormalShrinkWrapDeformer::compute(const MPlug& plug, MDataBlock& block) 
         fnSourceStatic.getVertexNormals(false, vnorms);
         fnSourceStatic.getPoints(qpts);
 
-        for (UINT i = 0; i < qpts.length(); ++i) {
-            
+        for (unsigned int i = 0; i < qpts.length(); ++i) {
+
             MPoint pt = qpts[i];
             MPoint tpt = pt * tranMatInv; // target space point
             MVector n = vnorms[i];
@@ -293,7 +293,7 @@ MStatus NormalShrinkWrapDeformer::deform(
     MIntArray baryIdxs = biDataA.array();
 
     for (; !iter.isDone(); iter.next()) {
-        int i = iter.index();
+        unsigned int i = (unsigned int)iter.index();
         if (i >= baryIdxs.length()) continue;
 
         float w = weightValue(block, multiIndex, i);

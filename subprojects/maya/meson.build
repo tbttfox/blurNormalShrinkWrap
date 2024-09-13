@@ -25,7 +25,7 @@ elif os_name == 'darwin'
   endif
   maya_compile_args += ['-DOSMac_']
   if meson.get_compiler('cpp').get_id() == 'clang'
-    maya_compile_args += ['--std', 'c++17', '--stdlib', 'libc++']
+    maya_compile_args += ['--stdlib', 'libc++']
     maya_compile_args += ['-arch', 'x86_64']
     maya_link_args += ['-arch', 'x86_64']
     if maya_version.version_compare('>=2024')
