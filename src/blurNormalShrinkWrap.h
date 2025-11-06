@@ -29,11 +29,11 @@ public:
     virtual MStatus deform(MDataBlock& block, MItGeometry& iter, const MMatrix& mat, unsigned int multiIndex);
 
     virtual MStatus compute(const MPlug& plug, MDataBlock& block);
+    virtual MStatus computeBvh(MDataBlock& block);
+    virtual MStatus storeBvh(MFnMesh &fnTargetStatic, const float * fptr);
 
     static MTypeId id;
     
-    static MObject aBvhComputed;
-
     static MObject aBaryIndices;
     static MObject aBaryValues;
 
@@ -57,5 +57,6 @@ private:
     std::vector<Vec3> normals;
     std::vector<Vec3> barys;
     std::vector<Index> baryIdxs;
+    bool bvhComputed = false;
     MIntArray triVerts;
 };

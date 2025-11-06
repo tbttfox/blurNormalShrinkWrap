@@ -26,8 +26,6 @@
 
 MTypeId NormalShrinkWrapDeformer::id(0x00122714);
 
-MObject NormalShrinkWrapDeformer::aBvhComputed;
-
 MObject NormalShrinkWrapDeformer::aBaryIndices;
 MObject NormalShrinkWrapDeformer::aBaryValues;
 
@@ -52,12 +50,6 @@ MStatus NormalShrinkWrapDeformer::initialize() {
     MFnTypedAttribute tAttr;
     MFnMatrixAttribute mAttr;
     MFnUnitAttribute uAttr;
-
-    aBvhComputed = nAttr.create("bvhComputed", "bc", MFnNumericData::kBoolean, false);
-    CHECKSTAT(status, "Error creating aBvhComputed");
-    nAttr.setHidden(true);
-    status = addAttribute(aBvhComputed);
-    CHECKSTAT(status, "Error adding aBvhComputed");
 
     aBaryIndices = tAttr.create("baryIndices", "bi", MFnData::kIntArray, MObject::kNullObj, &status);
     CHECKSTAT(status, "Error creating aBaryIndices");
@@ -110,7 +102,6 @@ MStatus NormalShrinkWrapDeformer::initialize() {
     std::vector<MObject*> masters, clients;
 
     masters.push_back(&aAngleTolerance);
-    masters.push_back(&aBvhComputed);
     masters.push_back(&aSourceStaticInvWorld);
     masters.push_back(&aSourceStaticMesh);
     masters.push_back(&aTargetStaticInvWorld);
@@ -128,7 +119,6 @@ MStatus NormalShrinkWrapDeformer::initialize() {
 
     attributeAffects(aBaryIndices, outputGeom);
     attributeAffects(aBaryValues, outputGeom);
-    attributeAffects(aTargetStaticMesh, aBvhComputed);
     attributeAffects(aTargetMesh, outputGeom);
     attributeAffects(aTargetInvWorld, outputGeom);
 
@@ -136,62 +126,72 @@ MStatus NormalShrinkWrapDeformer::initialize() {
 }
 
 
+MStatus NormalShrinkWrapDeformer::storeBvh(MFnMesh &fnTargetStatic, const float* fptr) {
+    bboxes.clear();
+    centers.clear();
+    normals.clear();
+    tris.clear();
+    barys.clear();
+    baryIdxs.clear();
+    triVerts.clear();
+
+    MIntArray triCounts;
+    fnTargetStatic.getTriangles(triCounts, triVerts);
+    for (unsigned int i = 0; i < triVerts.length(); i += 3) {
+        int tv0 = triVerts[i + 0];
+        double v00 = fptr[(tv0 * 3) + 0];
+        double v01 = fptr[(tv0 * 3) + 1];
+        double v02 = fptr[(tv0 * 3) + 2];
+        Vec3 v0(v00, v01, v02);
+
+        int tv1 = triVerts[i + 1];
+        double v10 = fptr[(tv1 * 3) + 0];
+        double v11 = fptr[(tv1 * 3) + 1];
+        double v12 = fptr[(tv1 * 3) + 2];
+        Vec3 v1(v10, v11, v12);
+
+        int tv2 = triVerts[i + 2];
+        double v20 = fptr[(tv2 * 3) + 0];
+        double v21 = fptr[(tv2 * 3) + 1];
+        double v22 = fptr[(tv2 * 3) + 2];
+        Vec3 v2(v20, v21, v22);
+
+        // notice 0 2 1.  This reverses the direction of the normal
+        // Also the order of the barycenters
+        tris.emplace_back(v0, v2, v1);
+    }
+    bvh = build_bvh(tris, bboxes, centers, normals);
+    return MStatus::kSuccess;
+}
+
+
+MStatus NormalShrinkWrapDeformer::computeBvh(MDataBlock& block) {
+    MStatus stat;
+    MObject targetStatic = block.inputValue(aTargetStaticMesh, &stat).asMesh();
+    if (targetStatic.isNull()) return MStatus::kInvalidParameter;
+    MFnMesh fnTargetStatic(targetStatic);
+    const auto fptr = fnTargetStatic.getRawPoints(&stat);
+    if (fptr == NULL) {
+        return MStatus::kInvalidParameter;
+    }
+
+    storeBvh(fnTargetStatic, fptr);
+    bvhComputed = true;
+    return stat;
+}
+
+
 MStatus NormalShrinkWrapDeformer::compute(const MPlug& plug, MDataBlock& block) {
 
     MStatus stat;
-    if (plug == aBvhComputed) {
-        MObject targetStatic = block.inputValue(aTargetStaticMesh, &stat).asMesh();
-        if (targetStatic.isNull()) return MStatus::kInvalidParameter;
-        MFnMesh fnTargetStatic(targetStatic);
-        const auto fptr = fnTargetStatic.getRawPoints(&stat);
-        if (fptr == NULL) {
-            return MStatus::kInvalidParameter;
-        }
-
-        bboxes.clear();
-        centers.clear();
-        normals.clear();
-        tris.clear();
-        barys.clear();
-        baryIdxs.clear();
-        triVerts.clear();
-
-        MIntArray triCounts;
-        fnTargetStatic.getTriangles(triCounts, triVerts);
-        for (unsigned int i = 0; i < triVerts.length(); i += 3) {
-            int tv0 = triVerts[i + 0];
-            double v00 = fptr[(tv0 * 3) + 0];
-            double v01 = fptr[(tv0 * 3) + 1];
-            double v02 = fptr[(tv0 * 3) + 2];
-            Vec3 v0(v00, v01, v02);
-
-            int tv1 = triVerts[i + 1];
-            double v10 = fptr[(tv1 * 3) + 0];
-            double v11 = fptr[(tv1 * 3) + 1];
-            double v12 = fptr[(tv1 * 3) + 2];
-            Vec3 v1(v10, v11, v12);
-
-            int tv2 = triVerts[i + 2];
-            double v20 = fptr[(tv2 * 3) + 0];
-            double v21 = fptr[(tv2 * 3) + 1];
-            double v22 = fptr[(tv2 * 3) + 2];
-            Vec3 v2(v20, v21, v22);
-
-            // notice 0 2 1.  This reverses the direction of the normal
-            // Also the order of the barycenters
-            tris.emplace_back(v0, v2, v1);
-        }
-        bvh = build_bvh(tris, bboxes, centers, normals);
-
-        MDataHandle compH = block.outputValue(aBvhComputed, &stat);
-        compH.setBool(true);
-        block.setClean(aBvhComputed);
-    }
-    else if (plug == aBaryIndices || plug == aBaryValues) {
+    if (plug == aBaryIndices || plug == aBaryValues) {
         // force evaluation of the BVH
-        MDataHandle compH = block.inputValue(aBvhComputed, &stat);
-        bool bvhComputed = compH.asBool();
-        if (!bvhComputed) return stat;
+        if (!bvhComputed) {
+            computeBvh(block);
+            if (!bvhComputed) {
+                return stat;
+            }
+        }
 
         MDataHandle sourceStaticH = block.inputValue(aSourceStaticMesh, &stat);
         MObject sourceStatic = sourceStaticH.asMesh();
@@ -276,7 +276,15 @@ MStatus NormalShrinkWrapDeformer::deform(
 
     MObject target = block.inputValue(aTargetMesh, &stat).asMesh();
     if (target.isNull()) return MStatus::kInvalidParameter;
-    MFnMesh fnTarget(target);
+    MFnMesh fnTarget(target, &stat);
+    if (!stat) return stat;
+
+    if (!bvhComputed) {
+        computeBvh(block);
+        if (!bvhComputed) {
+            return stat;
+        }
+    }
 
     MMatrix tMatInv = block.inputValue(aTargetInvWorld, &stat).asMatrix();
     MMatrix tMat = tMatInv.inverse();
@@ -292,6 +300,8 @@ MStatus NormalShrinkWrapDeformer::deform(
     MFnIntArrayData biDataA(biDataH.data());
     MIntArray baryIdxs = biDataA.array();
 
+    int numPoints = fnTarget.numVertices(&stat);
+
     for (; !iter.isDone(); iter.next()) {
         unsigned int i = (unsigned int)iter.index();
         if (i >= baryIdxs.length()) continue;
@@ -300,14 +310,25 @@ MStatus NormalShrinkWrapDeformer::deform(
         if (w == 0.0f) continue;
 
         int qIdx = baryIdxs[i];
-        if (qIdx < 0) continue;
-
+        if (qIdx < 0) {
+            continue;
+        }
+        if (3 * qIdx >= triVerts.length()) {
+            continue;
+        }
         MPoint bary = baryValues[i];
 
         MPoint A, B, C;
-        fnTarget.getPoint(triVerts[3 * qIdx + 0], A);
-        fnTarget.getPoint(triVerts[3 * qIdx + 1], B);
-        fnTarget.getPoint(triVerts[3 * qIdx + 2], C);
+        int idxA = triVerts[3 * qIdx + 0];
+        int idxB = triVerts[3 * qIdx + 1];
+        int idxC = triVerts[3 * qIdx + 2];
+        if (idxA >= numPoints || idxB >= numPoints || idxC >= numPoints) {
+            return MStatus::kFailure;
+        }
+        fnTarget.getPoint(idxA, A);
+        fnTarget.getPoint(idxB, B);
+        fnTarget.getPoint(idxC, C);
+
         MPoint P = (MVector)A * bary[0] + (MVector)B * bary[1] + (MVector)C * bary[2];
         P *= tMat;
         P *= dMatInv;
